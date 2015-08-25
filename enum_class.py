@@ -21,18 +21,13 @@
 ##  
 ##                              Usage
 ##  
-##  Enum    ::= Enum "(" name "," items ")"
-##  name    ::= string
-##  items   ::= item | item_list
-##  item_list   ::= "[" item "]"
-##  item    ::= string [("," item)]
+##      >>> from enumeration import *
 ##  
-##  An Enum is an object that takes a sting name as it's first parameter
-##  and either a list of strings or all remaining arguments are strings,
-##  and returns itself to be assigned to a variable.
+##  An Enum is an immutable object that takes a sting name as its first
+##  parameter and an iterable containing only strings as its second, and
+##  returns itself to be assigned to a variable.
 ##  
-##      >>> enum_object = Enum ("enum name", ["item1", "item2", ...])
-##      >>> enum_object = Enum ("enum name", "item1", "item2", ...)
+##      >>> enum_object = Enum ("enum name", ("item1", "item2", ...))
 ##  
 ##  the list/args passed become the enumerations items and can be
 ##  referenced by parameters or dictionary item reference, and are case
@@ -40,7 +35,7 @@
 ##  
 ##      >>> enum_object.item1
 ##      <Enum_Item object at 0x028E3630>
-##      >>> enum_object["iTeM2"]
+##      >>> enum_object["Item2"]
 ##      <Enum_Item object at 0x028E3730>
 ##  
 ##  Each Enum item is guaranteed to be unique as each item is an object
@@ -57,7 +52,7 @@
 ##  throw an error
 ##  
 ##      >>> enum_object.item1 = "Foo"
-##      NotImplementedError: 'Enum' object does not support attribute assignment
+##      TypeError: 'Enum' object does not support attribute assignment
 ##      >>> enum_object["item1"] = "Foo"
 ##      TypeError: 'Enum' object does not support item assignment
 ##  
@@ -75,8 +70,17 @@
 ##      'enum name'
 ##      >>> enum_object.item1.type
 ##      'enum name'
+##
+##  Membership and non-membership can be tested
+##
+##      >>> enum_object.item2 in enum_object
+##      True
+##      >>> foo = enum_object.item1
+##      >>> foo not in enum_object
+##      False
+##
 ##----------------------------------------------------------------------
-#Define the enum item class
+
 class Enum_Item(object):
     _name = ''
     _type = ''
@@ -84,6 +88,7 @@ class Enum_Item(object):
     def __init__(self, name, type):
         self._name = name
         self._type = type
+        self._initiated = True
     def __getattr__(self, name):
         if name == 'name':
             return self._name
@@ -92,17 +97,15 @@ class Enum_Item(object):
         else: raise AttributeError("No such attribute on 'Enum_Item' object.", name)
     def __setattr__(self, name, value):
         if self._initiated:
-            raise NotImplementedError("'Enum_Item' object does not support attribute assignment", name, value)
+            raise TypeError("'Enum_Item' object does not support attribute assignment", name, value)
         else: super(Enum_Item, self).__setattr__(name, value)
 
-#Define the enum class
 class Enum(object):
     _d = {}
     _name = ''
     _initiated = False
-    def __init__(self, name, *enums):
+    def __init__(self, name, enums):
         if type(name) != str: raise ValueError("Invalid name for object 'Enum'", name)
-        if type(enums[0]) == list: enums = enums[0]
         for i in enums:
             if type(i) != str: raise TypeError("Enum values must be a string.", i)
             if enums.count(i) > 1: raise ValueError("Duplicate values not allowed.", i)
@@ -118,9 +121,15 @@ class Enum(object):
             raise
     def __setattr__(self, a, v):
         if self._initiated:
-            raise NotImplementedError("'Enum' object does not support attribute assignment")
+            raise TypeError("'Enum' object does not support attribute assignment")
         else: super(Enum, self).__setattr__(a, v)
     def __getitem__(self, k):
         return self._d[k.upper().replace(' ','')]
     def __name__(self):
         return self._name
+    def __iter__(self):
+        i = 0 
+        l = self._d.values()
+        while i < len(l):
+            yield l[i]
+            i+=1
